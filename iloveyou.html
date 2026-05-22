@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A message for you 💌</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0010;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Lato', sans-serif;
+    overflow: hidden;
+    cursor: none;
+  }
+
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .envelope-wrap {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .tap-hint {
+    color: rgba(255,200,220,0.6);
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* ENVELOPE */
+  .envelope {
+    width: 260px;
+    height: 180px;
+    position: relative;
+    cursor: pointer;
+    filter: drop-shadow(0 0 40px rgba(220,80,120,0.5));
+    transition: filter 0.3s;
+  }
+  .envelope:hover {
+    filter: drop-shadow(0 0 60px rgba(220,80,120,0.8));
+  }
+
+  .env-body {
+    position: absolute;
+    bottom: 0;
+    width: 260px;
+    height: 150px;
+    background: linear-gradient(135deg, #8b1a3a 0%, #c0395c 50%, #8b1a3a 100%);
+    border-radius: 4px 4px 8px 8px;
+    box-shadow: inset 0 -4px 20px rgba(0,0,0,0.3);
+  }
+
+  .env-flap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-left: 130px solid transparent;
+    border-right: 130px solid transparent;
+    border-top: 90px solid #a02248;
+    transform-origin: top center;
+    transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
+    z-index: 2;
+  }
+
+  .envelope.open .env-flap {
+    transform: rotateX(180deg);
+  }
+
+  .env-left {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0; height: 0;
+    border-bottom: 75px solid #7a1530;
+    border-right: 130px solid transparent;
+    border-radius: 0 0 0 4px;
+  }
+
+  .env-right {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 0; height: 0;
+    border-bottom: 75px solid #7a1530;
+    border-left: 130px solid transparent;
+    border-radius: 0 0 4px 0;
+  }
+
+  .env-seal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background: radial-gradient(circle, #ff6b8a, #c0395c);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    z-index: 3;
+    transition: opacity 0.3s;
+    box-shadow: 0 0 15px rgba(255,100,140,0.6);
+  }
+
+  .envelope.open .env-seal {
+    opacity: 0;
+  }
+
+  /* LETTER that rises */
+  .letter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0px);
+    width: 220px;
+    background: #fff8f9;
+    border-radius: 4px;
+    padding: 20px;
+    z-index: 1;
+    opacity: 0;
+    transition: transform 0.7s cubic-bezier(0.2,0.8,0.3,1), opacity 0.4s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4);
+  }
+
+  .envelope.open .letter {
+    transform: translateX(-50%) translateY(-200px);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .letter-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .line {
+    height: 1px;
+    background: rgba(180,100,120,0.2);
+    border-radius: 1px;
+  }
+
+  /* MAIN MESSAGE SCREEN */
+  .message-screen {
+    position: fixed;
+    inset: 0;
+    background: #0a0010;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+  }
+
+  .message-screen.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .big-heart {
+    font-size: 80px;
+    animation: heartbeat 1.4s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255,80,120,0.8));
+    margin-bottom: 20px;
+  }
+
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    14% { transform: scale(1.2); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.15); }
+    56% { transform: scale(1); }
+  }
+
+  .i-love-you {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(52px, 12vw, 96px);
+    font-style: italic;
+    color: transparent;
+    background: linear-gradient(135deg, #ff8fab, #ff4d80, #ff8fab);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shimmer 3s ease infinite, fadeInUp 1s ease forwards;
+    opacity: 0;
+    text-align: center;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    padding: 0 20px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .sub-message {
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    color: rgba(255, 180, 200, 0.7);
+    font-size: 16px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 16px;
+    animation: fadeInUp 1s ease 0.5s forwards;
+    opacity: 0;
+    text-align: center;
+  }
+
+  .floating-hearts {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .fheart {
+    position: absolute;
+    font-size: 24px;
+    animation: floatUp linear forwards;
+    opacity: 0;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0.5) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 0.8; }
+    100% { transform: translateY(-10vh) scale(1.2) rotate(20deg); opacity: 0; }
+  }
+
+  /* Cursor trail */
+  .cursor-dot {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    background: #ff4d80;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s;
+    box-shadow: 0 0 10px rgba(255,77,128,0.8);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<div class="cursor-dot" id="cursor"></div>
+
+<!-- ENVELOPE SCENE -->
+<div class="envelope-wrap" id="envelopeScene">
+  <p class="tap-hint">tap to open</p>
+  <div class="envelope" id="envelope" onclick="openEnvelope()">
+    <div class="env-body"></div>
+    <div class="env-left"></div>
+    <div class="env-right"></div>
+    <div class="env-flap"></div>
+    <div class="env-seal">💌</div>
+    <div class="letter">
+      <div class="letter-lines">
+        <div class="line"></div><div class="line"></div><div class="line"></div>
+        <div class="line"></div><div class="line"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MESSAGE SCREEN -->
+<div class="message-screen" id="msgScreen">
+  <div class="floating-hearts" id="floatingHearts"></div>
+  <div class="big-heart">❤️</div>
+  <div class="i-love-you">I Love You</div>
+  <p class="sub-message">always & forever</p>
+</div>
+
+<script>
+// Star canvas
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const stars = Array.from({length: 200}, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  r: Math.random() * 1.5 + 0.3,
+  a: Math.random(),
+  speed: Math.random() * 0.01 + 0.003
+}));
+
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  stars.forEach(s => {
+    s.a += s.speed;
+    const alpha = (Math.sin(s.a) + 1) / 2;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,200,220,${alpha * 0.8})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// Cursor
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  spawnTrail(e.clientX, e.clientY);
+});
+
+let trailCount = 0;
+function spawnTrail(x, y) {
+  if (trailCount++ % 3 !== 0) return;
+  const dot = document.createElement('div');
+  dot.style.cssText = `position:fixed;width:6px;height:6px;background:rgba(255,100,150,${Math.random()*0.6+0.3});border-radius:50%;left:${x}px;top:${y}px;transform:translate(-50%,-50%);pointer-events:none;z-index:9998;transition:all 0.5s ease;`;
+  document.body.appendChild(dot);
+  requestAnimationFrame(() => {
+    dot.style.opacity = '0';
+    dot.style.transform = `translate(-50%, -${20 + Math.random()*20}px) scale(0)`;
+  });
+  setTimeout(() => dot.remove(), 600);
+}
+
+// Open envelope
+function openEnvelope() {
+  const env = document.getElementById('envelope');
+  env.classList.add('open');
+  setTimeout(() => {
+    document.getElementById('envelopeScene').style.opacity = '0';
+    document.getElementById('envelopeScene').style.transition = 'opacity 0.5s';
+    setTimeout(() => {
+      document.getElementById('envelopeScene').style.display = 'none';
+      const msg = document.getElementById('msgScreen');
+      msg.classList.add('show');
+      startFloatingHearts();
+    }, 500);
+  }, 1000);
+}
+
+// Floating hearts
+const heartEmojis = ['❤️','💕','💗','💖','💝','🌹','✨','💞'];
+function startFloatingHearts() {
+  const container = document.getElementById('floatingHearts');
+  function spawnHeart() {
+    const h = document.createElement('div');
+    h.className = 'fheart';
+    h.textContent = heartEmojis[Math.floor(Math.random()*heartEmojis.length)];
+    h.style.left = Math.random() * 100 + 'vw';
+    h.style.fontSize = (16 + Math.random() * 24) + 'px';
+    const dur = 4 + Math.random() * 4;
+    h.style.animationDuration = dur + 's';
+    h.style.animationDelay = '0s';
+    container.appendChild(h);
+    setTimeout(() => h.remove(), dur * 1000);
+  }
+  setInterval(spawnHeart, 400);
+  for(let i=0;i<8;i++) setTimeout(spawnHeart, i*200);
+}
+
+// Touch support
+document.getElementById('envelope').addEventListener('touchstart', openEnvelope);
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
